@@ -14,7 +14,7 @@ function q = SignedDistance(qstart,X,Targ,M,Ibdy,density)
 [q,~] = newton(qstart,Targ.Hs,Targ.nj,Ibdy,M,1e-6,20,X,density);
 
 function [F,J] = rhs(u0,Hs,nj,Ibdy,M,X,density)
-n2 = M.n^2;
+n2 = M.nx*M.ny;
 ufix = u0(ceil(n2/2));
 
 [F,J] = MA(u0,ufix,M,Ibdy,X,density);
@@ -25,9 +25,8 @@ J(Ibdy.All,:) = JTemp(Ibdy.All,:);
 function [out, J] = MA(u,ufix,M,Ibdy,X,density)
 %Finding the Monge-Ampere equation on the interior points. 
 
-n = M.n; 
-x1 = X.x1; x2 = X.x2; 
-x1 = reshape(x1,n^2,1); x2 = reshape(x2,n^2,1);
+nx = M.nx; ny = M.ny;  x1 = X.x1; x2 = X.x2; 
+x1 = reshape(x1,nx*ny,1); x2 = reshape(x2,nx*ny,1);
 
 uxx = M.D2XX * u;   uyy = M.D2YY * u;   uxy = M.D2XY * u;
 
@@ -36,42 +35,35 @@ gx = density.gx(x1,x2); gy = density.gy(x1,x2);
 
 MAS = uxx .* uyy - uxy.^2 - ufix - f./g;
 
-Z = sparse(n^2,n^2);
-fix = ceil((n^2)/2);
+Z = sparse(nx*ny,nx*ny);
+fix = ceil((nx*ny)/2);
 Z(:,fix) = 1;
-JAM = spdiags(uxx,0,n^2,n^2)*M.D2YY + spdiags(uyy,0,n^2,n^2)*M.D2XX - ...
-      2.*spdiags(uxy,0,n^2,n^2)*M.D2XY - Z;
+JAM = spdiags(uxx,0,nx*ny,nx*ny)*M.D2YY + spdiags(uyy,0,nx*ny,nx*ny)*M.D2XX - ...
+      2.*spdiags(uxy,0,nx*ny,nx*ny)*M.D2XY - Z;
   
-temp_Jx = -gx.*f./(g.^2);
-temp_Jy = -gy.*f./(g.^2);
+temp_Jx = -gx.*f./(g.^2);temp_Jy = -gy.*f./(g.^2);
   
-J = JAM - spdiags(temp_Jx,0,n^2,n^2)*M.D1XC - spdiags(temp_Jy,0,n^2,n^2)*M.D1YC; 
+J = JAM - spdiags(temp_Jx,0,nx*ny,nx*ny)*M.D1XC - spdiags(temp_Jy,0,nx*ny,nx*ny)*M.D1YC; 
 out = MAS; 
-
-
 
 function [H,J] = findH(q,Hs,nj,M,Ibdy)
 %Find the hamilton-jacobi function of the signed distance.
 %Defined on page 7.
 %Upwind Discretizations found on 9-10.
 
-n = M.n; 
-H = zeros(n^2,1);
+nx = M.nx; ny = M.ny; H = zeros(nx*ny,1);
 
 % Forward and backward derivatives.
-qxm = M.D1XM*q;qxp = M.D1XP*q;
-qym = M.D1YM*q;qyp = M.D1YP*q;
+qxm = M.D1XM*q;qxp = M.D1XP*q; qym = M.D1YM*q;qyp = M.D1YP*q;
 
 [H(Ibdy.All), iC] = max(max(nj(:,1),0)*qxm(Ibdy.All)' + min(nj(:,1),0)*qxp(Ibdy.All)'...
     + max(nj(:,2),0)*qym(Ibdy.All)' + min(nj(:,2),0)*qyp(Ibdy.All)' - repmat(Hs,[1,length(Ibdy.All)]) );
 
-n1 = zeros(n^2,1); n2 = n1;
+n1 = zeros(nx*ny,1); n2 = n1;
 n1(Ibdy.All) = nj(iC,1);  n2(Ibdy.All) = nj(iC,2);
 
-J = spdiags(max(n1,0),0,n^2,n^2)*(M.D1XM) + spdiags(min(n1,0),0,n^2,n^2)*(M.D1XP)+...
-    spdiags(max(n2,0),0,n^2,n^2)*(M.D1YM) + spdiags(min(n2,0),0,n^2,n^2)*(M.D1YP);
-
- return
+J = spdiags(max(n1,0),0,nx*ny,nx*ny)*(M.D1XM) + spdiags(min(n1,0),0,nx*ny,nx*ny)*(M.D1XP)+...
+    spdiags(max(n2,0),0,nx*ny,nx*ny)*(M.D1YM) + spdiags(min(n2,0),0,nx*ny,nx*ny)*(M.D1YP);
 
  
  function [u0,error] = newton(initu,Hs,nj,Ibdy,M,errortol,numloops,X,density)

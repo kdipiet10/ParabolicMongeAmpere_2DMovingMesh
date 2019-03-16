@@ -6,6 +6,8 @@ equations in curved domains using the Monge-Ampére equation" by Kelsey L. DiPie
 Accepted for publication in SIAM Journal of Scientific Computing, March 2019. 
 
 The corresponding code runs the example of the Schnakenburg Reaction Diffusion equation on a unit disk, in the
-regime corresponding to a splitting spot (Example 
-It is stand alone code with no other file depedencies. 
-Temporally solves the PMA explicitly with a forward Euler and the Schankenburg with Crank-Nicolson method
+regime corresponding to a splitting spot. Run Schnakenburg_ReactionDiffusion.m for solving and plotting. 
+
+File Dependencies: 
+SignedDistance.m (solves the Monge-Ampere mapping for convex domain)
+dampednewtons.m (damped newton's method to solve a nonlinear system)

@@ -530,3 +530,45 @@ Ibdy.BottomRight = find((X==endpt2)&(Y==endpt1));
 Ibdy.TopLeft = find((X==endpt1)&(Y==endpt2));
 Ibdy.TopRight = find((X==endpt2)&(Y==endpt2));
 
+function [last_v,last_u,rho] = findSchnakenSteadyStateFullSystem(A)
+%%Function to find the steady state profile of the Schnakenburg system. 
+%%Input- A: the value A from the Schnakenburg system 
+%%Ouput - last_v: 1D profile for v. last_u: 1D profile for u. rho:
+%%coordinate system used for the steady state profile. 
+n = 500;
+a = 0; b = 15; %Domain endpoints
+
+%%%Create an initial guess for the BVP
+x = linspace(a,b,n);
+solinit = bvpinit(x,@(x) initcond(x,A));
+options = [];
+%%Solve the for the steady state using BVP4C
+sol = bvp4c(@emdenode,@emdenbc,solinit,options,A);
+%%Evaluate and export the solution on the mesh. 
+y = deval(sol,x);
+last_u = y(1,:);
+last_v = y(3,:);
+rho = x;
+
+function dydx = emdenode(x,y,A)
+%%Setting the right hand side of the system for BVP4C
+if (x==0)
+    dydx = [y(2), 0.5*(y(1)*y(3)^2), y(4), 0.5*(y(3)-y(1)*y(3)^2)];
+else
+    dydx = [y(2), -y(2)/x + y(1)*y(3)^2, y(4), -y(4)/x + y(3) - y(1)*y(3)^2];
+end
+
+function res = emdenbc(ya,yb,A)
+%%Boundary condtions for the system. 
+%%u'(0) = 0; u(L) = Slog(p) + chi(S)
+%%v'(0) = 0; v(L) = 0;
+L = 15;
+S = A / 2;
+
+res = [ya(2), yb(2) - (S/L), ya(4), yb(3)];
+
+function yinit = initcond(x,A)
+%%Set the initial guess for the BVP solver.
+S = A / 2;
+yinit = [S*log(1+x),0,2*sech(x).^2,0];
+
